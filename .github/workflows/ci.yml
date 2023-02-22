@@ -40,7 +40,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: install golan migrate
-        run: $ curl -L https://github.com/golang-migrate/migrate/releases/download/$version/migrate.$platform-amd64.tar.gz | tar xvz
+        run: |
+          mkdir migrate-arm
+          cd migrate-arm
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.15.2/migrate-4.15.2.zip | tar xvz
+          cd ../
+          sudo mv migrate-arm /usr/bin/
+          which migrate
 
       - name: run migrations
         run: make migrateup
