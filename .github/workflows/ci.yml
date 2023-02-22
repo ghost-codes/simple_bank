@@ -39,6 +39,9 @@ jobs:
       - name: checkout code into go module repository
         uses: actions/checkout@v3
 
+      - name: install golan migrate
+        run: $ curl -L https://github.com/golang-migrate/migrate/releases/download/$version/migrate.$platform-amd64.tar.gz | tar xvz
+
       - name: run migrations
         run: make migrateup
 
