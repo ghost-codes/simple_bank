@@ -6,11 +6,12 @@ import (
 
 	db "github.com/ghost-codes/simplebank/db/sqlc"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 )
 
 type CreateAccountRequest struct {
 	Owner    string `json:"owner" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR"`
+	Currency string `json:"currency" binding:"required,currency"`
 }
 type GetAccountByIDRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
@@ -24,6 +25,7 @@ func (server *Server) createAccount(context *gin.Context) {
 	var req CreateAccountRequest
 	err := context.BindJSON(&req)
 	if err != nil {
+
 		context.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -36,7 +38,14 @@ func (server *Server) createAccount(context *gin.Context) {
 
 	account, err := server.store.CreateAccount(context, args)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "foreign_key_violation", "uniue_violation":
+				context.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
 
+		}
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}

@@ -43,5 +43,5 @@ func RandomAmount() int64 {
 }
 
 func RandomCurrency() string {
-	return []string{"EUR", "USD", "GHS"}[rand.Intn(2)]
+	return []string{EUR, USD, CAD}[rand.Intn(2)]
 }
