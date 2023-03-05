@@ -1,19 +1,30 @@
 package api
 
 import (
+	"fmt"
+
 	db "github.com/ghost-codes/simplebank/db/sqlc"
+	"github.com/ghost-codes/simplebank/token"
+	"github.com/ghost-codes/simplebank/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 )
 
 type Server struct {
-	store  *db.Store
-	router *gin.Engine
+	config     util.Config
+	store      db.Store
+	tokenMaker token.Maker
+	router     *gin.Engine
 }
 
-func NewServer(store *db.Store) *Server {
-	server := &Server{store: store}
+func NewServer(store db.Store, config util.Config) (*Server, error) {
+	maker, err := token.NewJWTMaker(config.SecretKey)
+
+	if err != nil {
+		return nil, fmt.Errorf("Cannot create token maker: %v", err)
+	}
+	server := &Server{store: store, tokenMaker: maker, config: config}
 
 	// router
 	router := gin.Default()
@@ -30,7 +41,7 @@ func NewServer(store *db.Store) *Server {
 	router.POST("/transfers", server.createTransfer)
 	router.POST("/users", server.createUser)
 	server.router = router
-	return server
+	return server, nil
 }
 
 func (server *Server) Start(address string) error {
