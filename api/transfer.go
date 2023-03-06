@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	db "github.com/ghost-codes/simplebank/db/sqlc"
+	"github.com/ghost-codes/simplebank/token"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,12 +24,20 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	fromAccount, ok := server.validAccount(ctx, req.FromAccountId, req.Currency)
 
-	if !server.validAccount(ctx, req.FromAccountId, req.Currency) {
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	if fromAccount.Owner != payload.Username {
+		err := fmt.Errorf("account does not belong to authorized user: %v", payload.Username)
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+	if !ok {
 		return
 	}
 
-	if !server.validAccount(ctx, req.ToAccountId, req.Currency) {
+	if _, ok := server.validAccount(ctx, req.ToAccountId, req.Currency); !ok {
 		return
 	}
 
@@ -47,7 +56,7 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-func (server *Server) validAccount(ctx *gin.Context, accountId int64, currency string) bool {
+func (server *Server) validAccount(ctx *gin.Context, accountId int64, currency string) (*db.Account, bool) {
 	account, err := server.store.GetAccount(ctx, accountId)
 
 	if err != nil {
@@ -56,13 +65,13 @@ func (server *Server) validAccount(ctx *gin.Context, accountId int64, currency s
 		} else {
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		}
-		return false
+		return nil, false
 	}
 
 	if account.Currency != currency {
 		err = fmt.Errorf("account %v currency mismatch:%v vs %v", accountId, account.Currency, currency)
 		ctx.JSON(http.StatusBadGateway, errorResponse(err))
-		return false
+		return nil, false
 	}
-	return true
+	return &account, true
 }

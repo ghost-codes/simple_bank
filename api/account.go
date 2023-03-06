@@ -2,15 +2,16 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	db "github.com/ghost-codes/simplebank/db/sqlc"
+	"github.com/ghost-codes/simplebank/token"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
 
 type CreateAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 type GetAccountByIDRequest struct {
@@ -30,8 +31,10 @@ func (server *Server) createAccount(context *gin.Context) {
 		return
 	}
 
+	payload := context.MustGet(authorizationPayloadKey).(*token.Payload)
+
 	args := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    payload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -70,6 +73,14 @@ func (server *Server) getAccountById(context *gin.Context) {
 		return
 	}
 
+	payload := context.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	if account.Owner != payload.Username {
+		err := fmt.Errorf("account does not belong to authorized user: %v", payload.Username)
+		context.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
 	context.JSON(http.StatusOK, account)
 }
 
@@ -80,7 +91,14 @@ func (server *Server) deleteAccount(context *gin.Context) {
 		return
 	}
 
-	err := server.store.DeleteAccount(context, req.ID)
+	payload := context.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	args := db.DeleteAccountParams{
+		ID:    req.ID,
+		Owner: payload.Username,
+	}
+
+	err := server.store.DeleteAccount(context, args)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			context.JSON(http.StatusNotFound, errorResponse(err))
@@ -100,7 +118,9 @@ func (server *Server) listAccounts(context *gin.Context) {
 		return
 	}
 
+	payload := context.MustGet(authorizationPayloadKey).(*token.Payload)
 	args := db.ListAccountsParams{
+		Owner:  payload.Username,
 		Limit:  req.Count,
 		Offset: (req.Page - 1) * req.Count,
 	}

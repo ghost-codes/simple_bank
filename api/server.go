@@ -27,25 +27,34 @@ func NewServer(store db.Store, config util.Config) (*Server, error) {
 	server := &Server{store: store, tokenMaker: maker, config: config}
 
 	// router
-	router := gin.Default()
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("currency", validCurrency)
-	}
-
-	//Add routes to server
-	router.POST("/accounts", server.createAccount)
-	router.GET("/accounts/:id", server.getAccountById)
-	router.GET("/accounts", server.listAccounts)
-	router.DELETE("/accounts/:id", server.deleteAccount)
-
-	router.POST("/transfers", server.createTransfer)
-	router.POST("/users", server.createUser)
-	server.router = router
+	server.setupRouter()
 	return server, nil
 }
 
 func (server *Server) Start(address string) error {
 	return server.router.Run(address)
+
+}
+
+func (server *Server) setupRouter() {
+	router := gin.Default()
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("currency", validCurrency)
+	}
+
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+
+	//Add routes to server
+	authRoutes.POST("/accounts", server.createAccount)
+	authRoutes.GET("/accounts/:id", server.getAccountById)
+	authRoutes.GET("/accounts", server.listAccounts)
+	authRoutes.DELETE("/accounts/:id", server.deleteAccount)
+
+	authRoutes.POST("/transfers", server.createTransfer)
+	router.POST("/users", server.createUser)
+	router.POST("/users/login", server.loginUser)
+
+	server.router = router
 
 }
 
