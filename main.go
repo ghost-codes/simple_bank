@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/ghost-codes/simplebank/api"
@@ -16,7 +17,7 @@ func main() {
 		log.Fatal("unable to load config:", err)
 	}
 	conn, err := sql.Open(config.DBDriver, config.DBSource)
-
+	fmt.Println("============>", config.DBSource)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}

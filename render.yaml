@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: simplebank
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    dockerContext: ./
+
+  envVars:
+    - key: GIN_MODE
+      value: release
+    - key: PORT
+      value: 4000
+    - key: DB_HOST
+      fromDatabase:
+        name: simplebank_db
+        property: host
+    - key: DB_PORT
+      fromDatabase:
+        name: simplebank_db
+        property: port 
+    - key: DB_USER
+      fromDatabase:
+        name: simplebank_db
+        property: user
+    - key: DB_PASSWORD
+      fromDatabase:
+        name: simplebank_db
+        property: password
+    - key: DB_NAME
+      fromDatabase: 
+        name: simplebank_db
+        property: database
+
+
+databases:
+  - name: simplebank_db
+    plan: free
+    databaseName: simplebank_db
