@@ -31,6 +31,10 @@ services:
       fromDatabase:
         name: simplebank_db
         property: database
+    - key: DB_SOURCE
+      property: postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+    - key: SEVER_ADDR
+      property: 0.0.0.0:3000
 
 databases:
   - name: simplebank_db
